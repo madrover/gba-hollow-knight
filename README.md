@@ -27,13 +27,19 @@ make clean                     # removes build artifacts
 
 In mGBA the default keyboard mapping is arrow keys for the D-pad and X for A.
 
-## Placeholder art
+## Art
 
-`tools/make_placeholder_art.py` generates `graphics/knight.bmp`, `graphics/room_tiles.bmp` and `graphics/room_palette.bmp`. Re-run it after editing the pixel art in the script, or replace the BMPs with real art (4bpp indexed, 16 colors, color 0 = transparent; knight frames are 16x32 stacked vertically).
+`tools/make_art.py` generates all the art in `graphics/` from text pixel grids and simple procedural rules:
+
+- `knight.bmp`: 32x32 Knight frames stacked vertically (idle, run, jump, fall)
+- `room_tiles.bmp` + `room_palette.bmp`: Crossroads-style rock tiles; `src/room.cpp` picks tiles (edges, rounded corners, platforms) from the ASCII layout
+- `cave_bg.bmp`: 256x256 horizontally tileable far background, scrolled at half speed for parallax
+
+Re-run it after editing the script, or replace the BMPs with hand-made art (4bpp indexed, 16 colors, color 0 = transparent), keeping frame and tile order.
 
 ## Layout
 
-- `src/`, `include/`: game code (`room.*`: ASCII room layout, background and collision; `knight.*`: player physics and animation)
+- `src/`, `include/`: game code (`room.*`: ASCII room layout, tile selection and collision; `knight.*`: player physics and animation; `main.cpp`: camera and parallax)
 - `tools/`: helper scripts
 - `graphics/`: `.bmp` + `.json` image assets (converted at build time)
 - `audio/`, `dmg_audio/`: music and sound effects

@@ -5,6 +5,9 @@
 #include "bn_unique_ptr.h"
 #include "bn_camera_ptr.h"
 #include "bn_bg_palettes.h"
+#include "bn_regular_bg_ptr.h"
+
+#include "bn_regular_bg_items_cave_bg.h"
 
 #include "room.h"
 #include "knight.h"
@@ -13,6 +16,7 @@ namespace
 {
     constexpr int camera_smoothing = 8;         // Higher is lazier.
     constexpr int camera_look_up = 24;          // Keep the Knight a bit below the screen center.
+    constexpr int far_bg_parallax = 2;          // The far background scrolls at 1/2 of the camera speed.
 
     // Converts a world position (top-left origin) to Butano coordinates (room centered on (0, 0)),
     // clamped so the camera never shows outside the room.
@@ -42,6 +46,10 @@ int main()
     bn::camera_ptr camera = bn::camera_ptr::create(camera_target(spawn_position));
     room->bg().set_camera(camera);
 
+    // Far background: not attached to the camera, scrolled manually for parallax. It wraps horizontally.
+    bn::regular_bg_ptr far_bg = bn::regular_bg_items::cave_bg.create_bg(0, 0);
+    far_bg.set_priority(3);
+
     hk::knight knight(spawn_position, camera);
 
     while(true)
@@ -51,6 +59,7 @@ int main()
         bn::fixed_point target = camera_target(knight.position());
         bn::fixed_point position = camera.position();
         camera.set_position(position + (target - position) / camera_smoothing);
+        far_bg.set_position(-camera.position() / far_bg_parallax);
 
         bn::core::update();
     }

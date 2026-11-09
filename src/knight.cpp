@@ -20,11 +20,11 @@ namespace
     constexpr int coyote_time_frames = 5;       // Jump still allowed shortly after walking off a ledge.
     constexpr int jump_buffer_frames = 6;       // A pressed shortly before landing still jumps.
 
-    // Hitbox, relative to the feet center. Narrower than the sprite and excluding the horns.
-    constexpr bn::fixed half_width = 5;
-    constexpr bn::fixed body_height = 22;
+    // Hitbox, relative to the feet center. Narrower than the mask and excluding the horns.
+    constexpr bn::fixed half_width = 7;
+    constexpr bn::fixed body_height = 23;
 
-    // Graphics indices in graphics/knight.bmp (see tools/make_placeholder_art.py).
+    // Graphics indices in graphics/knight.bmp (see tools/make_art.py).
     constexpr int idle_frames[] = { 0, 1 };
     constexpr int run_frames[] = { 2, 3, 4, 5 };
     constexpr int jump_frame = 6;
@@ -40,6 +40,7 @@ knight::knight(const bn::fixed_point& spawn_position, const bn::camera_ptr& came
     _position(spawn_position)
 {
     _sprite.set_camera(camera);
+    _sprite.set_bg_priority(1);     // In front of the room (priority 2) and the far background (priority 3).
     _update_sprite();
 }
 

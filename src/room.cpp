@@ -13,12 +13,18 @@ namespace hk
 
 namespace
 {
-    // Tile indices in graphics/room_tiles.bmp.
+    // Tile indices in graphics/room_tiles.bmp (see tools/make_art.py).
+    // Right-facing variants are the left-facing tiles flipped horizontally.
     constexpr int empty_tile = 0;
-    constexpr int rock_tile = 1;
-    constexpr int rock_alt_tile = 2;
-    constexpr int rock_top_tile = 3;
-    constexpr int rock_bottom_tile = 4;
+    constexpr int fill_tile = 1;
+    constexpr int fill_alt_tile = 2;
+    constexpr int top_tile = 3;
+    constexpr int bottom_tile = 4;
+    constexpr int wall_tile = 5;
+    constexpr int top_corner_tile = 6;
+    constexpr int bottom_corner_tile = 7;
+    constexpr int platform_tile = 8;
+    constexpr int platform_end_tile = 9;
 
     constexpr bn::string_view layout[] = {
         "################################################################",
@@ -104,26 +110,43 @@ bn::regular_bg_ptr room::_create_bg()
         for(int x = 0; x < columns; ++x)
         {
             int tile_index = empty_tile;
+            bool flip = false;
 
             if(layout_solid(x, y))
             {
-                if(! layout_solid(x, y - 1))
+                // Pick the tile from which sides are exposed to open space.
+                bool top = ! layout_solid(x, y - 1);
+                bool bottom = ! layout_solid(x, y + 1);
+                bool left = ! layout_solid(x - 1, y);
+                bool right = ! layout_solid(x + 1, y);
+                flip = right && ! left;
+
+                if(top && bottom)
                 {
-                    tile_index = rock_top_tile;
+                    tile_index = (left || right) ? platform_end_tile : platform_tile;
                 }
-                else if(! layout_solid(x, y + 1))
+                else if(top)
                 {
-                    tile_index = rock_bottom_tile;
+                    tile_index = (left || right) ? top_corner_tile : top_tile;
+                }
+                else if(bottom)
+                {
+                    tile_index = (left || right) ? bottom_corner_tile : bottom_tile;
+                }
+                else if(left || right)
+                {
+                    tile_index = wall_tile;
                 }
                 else
                 {
                     // Cheap hash to break up the repeating rock texture.
-                    tile_index = ((x * 7 + y * 13) % 5 == 0) ? rock_alt_tile : rock_tile;
+                    tile_index = ((x * 7 + y * 13) % 5 == 0) ? fill_alt_tile : fill_tile;
                 }
             }
 
             bn::regular_bg_map_cell_info cell_info;
             cell_info.set_tile_index(tile_index);
+            cell_info.set_horizontal_flip(flip);
             _cells[_map_item.cell_index(x, y)] = cell_info.cell();
         }
     }
@@ -134,6 +157,7 @@ bn::regular_bg_ptr room::_create_bg()
     bn::regular_bg_item bg_item(
             bn::regular_bg_tiles_items::room_tiles, bn::bg_palette_items::room_palette, _map_item);
     bn::regular_bg_ptr result = bg_item.create_bg(0, 0);
+    result.set_priority(2);
 
     bn::bg_tiles::set_allow_offset(true);
     return result;
