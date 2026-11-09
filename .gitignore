@@ -1,0 +1,7 @@
+build/
+*.gba
+*.elf
+*.sav
+.DS_Store
+.claude/
+pasted-image-*.png
