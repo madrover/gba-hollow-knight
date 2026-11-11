@@ -23,9 +23,10 @@ make clean                     # removes build artifacts
 ## Controls
 
 - D-pad left/right: run
-- A: jump (hold for higher jumps)
+- A: nail attack (slashes in the facing direction; works in the air too)
+- B: jump (hold for higher jumps)
 
-In mGBA the default keyboard mapping is arrow keys for the D-pad and X for A.
+mGBA's default keyboard mapping is arrow keys for the D-pad, X for A and Z for B. To jump with X and attack with Space, remap A to Space and B to X in mGBA's Settings > Controllers (or set `keyA=32` and `keyB=88` under `[gba.input.QT_K]` in `~/.config/mgba/config.ini` while mGBA is closed).
 
 ## Art
 

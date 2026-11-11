@@ -31,19 +31,24 @@ private:
         RUN,
         JUMP,
         FALL,
+        ATTACK,
     };
 
     bn::sprite_ptr _sprite;
+    bn::sprite_ptr _slash_sprite;
     bn::fixed_point _position;
     bn::fixed_point _velocity;
     bool _grounded = false;
     bool _facing_left = false;
     int _coyote_frames = 0;
     int _jump_buffer_frames = 0;
+    int _attack_frames = 0;             // Remaining frames of the current nail slash (0 when not attacking).
+    int _attack_cooldown_frames = 0;
     animation _animation = animation::IDLE;
     int _animation_frame = 0;
     int _animation_counter = 0;
     int _graphics_index = 0;
+    int _slash_graphics_index = 0;
 
     void _move_x(const room& room);
     void _move_y(const room& room);

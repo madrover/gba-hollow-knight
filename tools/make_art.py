@@ -6,6 +6,7 @@ Run from the project root: python3 tools/make_art.py
 Everything is drawn from text grids or simple procedural rules, so the art is reproducible and easy to tweak.
 Generated files:
   knight.bmp        32x32 Knight frames stacked vertically (frame order must match src/knight.cpp)
+  slash.bmp         32x32 nail slash frames stacked vertically (frame order must match src/knight.cpp)
   room_tiles.bmp    8x8 rock tiles laid out horizontally (order must match src/room.cpp)
   room_palette.bmp  palette for room_tiles
   cave_bg.bmp       256x256 horizontally tileable far background (parallax layer)
@@ -13,6 +14,7 @@ Generated files:
 All images are 4bpp (16 colors); color 0 is transparent.
 """
 
+import math
 import os
 import random
 import struct
@@ -114,6 +116,32 @@ HEAD = mirrored([
     "...........KKKKK",
 ])
 
+EYE_ROWS = range(13, 19)
+EYE_SHIFT = 2
+
+
+def face_right(head):
+    """Shifts the eyes toward the facing side so the horizontal flip reads as turning around.
+
+    Far-side eye pixels that would touch the mask outline are dropped, leaving that eye slightly narrower.
+    """
+    result = list(head)
+    for y in EYE_ROWS:
+        r = head[y]
+        first, last = r.index('K'), r.rindex('K')
+        eyes = [x for x in range(first + 1, last) if r[x] == 'K']
+        cleared = list(r[:first + 1] + r[first + 1:last].replace('K', 'W') + r[last:])
+        shifted = list(cleared)
+        for x in eyes:
+            nx = x + EYE_SHIFT
+            if cleared[nx] == 'W' and cleared[nx + 1] == 'W':
+                shifted[nx] = 'K'
+        result[y] = ''.join(shifted)
+    return result
+
+
+HEAD = face_right(HEAD)
+
 # Cloak rows 23..28 (6 rows).
 CLOAKS = {
     'rest': [
@@ -186,6 +214,24 @@ def knight_frame(cloak, legs, bob=False):
     return rows
 
 
+def overlay(rows, y, x, content):
+    """Draws `content` over `rows` at (x, y); '.' in `content` keeps the pixel below."""
+    rows = list(rows)
+    r = list(rows[y])
+    for i, c in enumerate(content):
+        if c != '.':
+            r[x + i] = c
+    rows[y] = ''.join(r)
+    return rows
+
+
+def with_nail(rows):
+    """The nail held out in front at cloak height, gripped at the cloak edge."""
+    rows = overlay(rows, 24, 22, "KKKKKKKKK")
+    rows = overlay(rows, 25, 21, "KSWWWWWWWWK")
+    return overlay(rows, 26, 22, "KKKKKKKKK")
+
+
 # Frame order must match the frame constants in src/knight.cpp.
 KNIGHT_FRAMES = [
     knight_frame('rest', 'stand'),             # 0 idle
@@ -196,6 +242,48 @@ KNIGHT_FRAMES = [
     knight_frame('run_b', 'run3', bob=True),   # 5 run
     knight_frame('jump', 'jump'),              # 6 jump (rising)
     knight_frame('fall', 'fall'),              # 7 fall
+    with_nail(knight_frame('run_a', 'run0')),  # 8 attack (grounded lunge)
+    with_nail(knight_frame('jump', 'jump')),   # 9 attack (airborne)
+]
+
+
+# ---------------------------------------------------------------------------------------------------------------------
+# Nail slash: 32x32 frames of a white crescent swinging top to bottom, opening towards the Knight (drawn facing right).
+# ---------------------------------------------------------------------------------------------------------------------
+
+SLASH_PALETTE = [
+    (255, 0, 255),    # 0 transparent
+    (244, 244, 238),  # 1 core
+    (184, 194, 220),  # 2 pale
+    (112, 122, 164),  # 3 fading
+]
+
+SLASH_SIZE = 32
+
+
+def slash_frame(min_angle, max_angle, fading):
+    """Crescent pixels whose angle (degrees, -90 top .. 90 bottom) around the arc center is in range."""
+    cx, cy = 4, 16
+    pixels = [[0] * SLASH_SIZE for _ in range(SLASH_SIZE)]
+    for y in range(SLASH_SIZE):
+        for x in range(SLASH_SIZE):
+            outer = ((x - cx) / 26) ** 2 + ((y - cy) / 15) ** 2
+            inner = ((x - cx + 5) / 24) ** 2 + ((y - cy) / 12) ** 2
+            if outer > 1 or inner <= 1:
+                continue
+            angle = math.degrees(math.atan2(y - cy, x - cx))
+            if not min_angle <= angle <= max_angle:
+                continue
+            edge = outer > 0.8 or inner < 1.15
+            pixels[y][x] = (3 if edge else 2) if fading else (2 if edge else 1)
+    return pixels
+
+
+# Frame order must match the slash constants in src/knight.cpp.
+SLASH_FRAMES = [
+    slash_frame(-90, -15, False),  # 0 swing starts above
+    slash_frame(-90, 90, False),   # 1 full arc
+    slash_frame(15, 90, True),     # 2 tail fades below
 ]
 
 
@@ -314,6 +402,10 @@ def main():
     write_bmp_4bpp(os.path.join(GRAPHICS_DIR, 'knight.bmp'), 32, 32 * len(KNIGHT_FRAMES), KNIGHT_PALETTE,
                    grid(knight_rows, KNIGHT_LEGEND))
 
+    slash_rows = [r for frame in SLASH_FRAMES for r in frame]
+    write_bmp_4bpp(os.path.join(GRAPHICS_DIR, 'slash.bmp'), SLASH_SIZE, SLASH_SIZE * len(SLASH_FRAMES), SLASH_PALETTE,
+                   slash_rows)
+
     tile_rows = [''.join(tile[y] for tile in ROOM_TILES) for y in range(8)]
     write_bmp_4bpp(os.path.join(GRAPHICS_DIR, 'room_tiles.bmp'), 8 * len(ROOM_TILES), 8, ROOM_PALETTE,
                    grid(tile_rows, ROOM_LEGEND))
@@ -324,7 +416,7 @@ def main():
 
     write_bmp_4bpp(os.path.join(GRAPHICS_DIR, 'cave_bg.bmp'), CAVE_SIZE, CAVE_SIZE, CAVE_PALETTE, draw_cave_bg())
 
-    print('Wrote knight.bmp, room_tiles.bmp, room_palette.bmp, cave_bg.bmp to', os.path.normpath(GRAPHICS_DIR))
+    print('Wrote knight.bmp, slash.bmp, room_tiles.bmp, room_palette.bmp, cave_bg.bmp to', os.path.normpath(GRAPHICS_DIR))
 
 
 if __name__ == '__main__':
